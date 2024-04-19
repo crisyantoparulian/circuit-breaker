@@ -2,7 +2,7 @@ module client-demo
 
 go 1.19
 
-replace github.com/sigmavirus24/circuitry => ./lib/circuitry/
+// replace github.com/sigmavirus24/circuitry => ./lib/circuitry/
 
 require (
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
