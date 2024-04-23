@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 )
 
 type Response struct {
@@ -13,11 +14,11 @@ type Response struct {
 
 var (
 	counter = 0
+	mtx     sync.Mutex
 )
 
 func main() {
 
-	// Register the handler function for the /hello route
 	http.HandleFunc("/data", handler)
 
 	// Start the HTTP server on port 8080
@@ -26,18 +27,19 @@ func main() {
 
 }
 func handler(w http.ResponseWriter, r *http.Request) {
+	mtx.Lock()
 	counter++
+	mtx.Unlock()
 	defer fmt.Println("TOTAL REQUEST == ", counter)
 	data := Response{
 		Success: true,
 		Message: "success",
 	}
 
-	if counter > 30 {
+	if counter > 1 {
 		data.Success = false
 		data.Message = "failed"
 	}
-	// time.Sleep(7 * time.Second)
 
 	responseJson(w, data)
 }
