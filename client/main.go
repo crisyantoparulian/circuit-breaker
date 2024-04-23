@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
@@ -32,6 +33,7 @@ var (
 	goBreaker    *gobreaker.CircuitBreaker
 	urlServer    = "http://localhost:8081/data"
 	totalRequest = 0
+	mtx          sync.Mutex
 )
 
 func main() {
@@ -41,9 +43,9 @@ func main() {
 	hystrix.ConfigureCommand("api_get_hystrix", hystrix.CommandConfig{
 		Timeout:                5000, // 5s timeout func
 		MaxConcurrentRequests:  20,
-		ErrorPercentThreshold:  50,
+		ErrorPercentThreshold:  30,    // error treshold needed to open circuit
 		SleepWindow:            10000, // 10s to sleep after tripped to open
-		RequestVolumeThreshold: 20,
+		RequestVolumeThreshold: 10,    // minimum count request volume
 	})
 
 	http.HandleFunc("/circuitry", handlerWithCircuitry)
@@ -63,12 +65,17 @@ func main() {
 }
 
 func handlerHystrix(w http.ResponseWriter, r *http.Request) {
+
+	mtx.Lock()
 	totalRequest++
-	defer logger.Info(fmt.Sprintf("TOTAL REQUEST : %d", totalRequest))
+	mtx.Unlock()
+
+	logger.Info(fmt.Sprintf("NUM OF REQUEST : %d", totalRequest))
+
 	data := Response{}
 
 	err := hystrix.DoC(r.Context(), "api_get_hystrix", func(c context.Context) error {
-		// talk to other services
+
 		logger.Info("EXECUTE HTTP GET BY HYSTRIX")
 		response, err := client.R().Get(urlServer)
 		if err != nil {
